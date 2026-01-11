@@ -12,12 +12,17 @@ const createPost = async (data:Omit<Post, "id" | "createdAt" | "updatedAt">, use
     return result;
 }
 
-const getAllPost = async ( {search, tags, isFeatured, status, authorId}: { 
+const getAllPost = async ( {search, tags, isFeatured, status, authorId,page,limit,skip, sortBy, sortOrder}: { 
     search : string | undefined,
     tags: string[] | [],
     isFeatured: boolean | undefined,
     status: PostStatus | undefined,
-    authorId: string | undefined
+    authorId: string | undefined,
+    page:number,
+    limit:number,
+    skip: number,
+    sortBy: string | undefined,
+    sortOrder: string | undefined
 }) =>{
      const andConditions: PostWhereInput[] = []
     if(search){
@@ -71,6 +76,8 @@ const getAllPost = async ( {search, tags, isFeatured, status, authorId}: {
         })
     }
     const allPost= await prisma.post.findMany({
+        take: limit,
+        skip,
         where:{
            AND : andConditions
         }
