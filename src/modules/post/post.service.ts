@@ -1,6 +1,8 @@
-import { Post, PostStatus } from "../../../generated/prisma/client"
+import { toDotPath } from "better-auth/*";
+import { CommentStatus, Post, PostStatus } from "../../../generated/prisma/client"
 import { PostWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma"
+import { count } from "node:console";
 
 const createPost = async (data:Omit<Post, "id" | "createdAt" | "updatedAt">, userId: string) =>{
     const result = await prisma.post.create({
@@ -21,8 +23,8 @@ const getAllPost = async ( {search, tags, isFeatured, status, authorId,page,limi
     page:number,
     limit:number,
     skip: number,
-    sortBy: string | undefined,
-    sortOrder: string | undefined
+    sortBy: string ,
+    sortOrder: string 
 }) =>{
      const andConditions: PostWhereInput[] = []
     if(search){
@@ -80,12 +82,84 @@ const getAllPost = async ( {search, tags, isFeatured, status, authorId,page,limi
         skip,
         where:{
            AND : andConditions
+        },
+        orderBy: {
+            [sortBy]: sortOrder
+        },
+        include: {
+            _count:{
+                select: {comments:true}
+            }
         }
     });
-    return allPost;
+    const total = await prisma.post.count({
+        where:{
+           AND : andConditions
+        }
+    })
+    return {
+        data: allPost,
+        pagination: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total/limit)
+        }
+    };
 }
 
+
+const getPostById =async (postId: string) =>{
+   return await prisma.$transaction(async (tx) =>{
+    await tx.post.update({
+        where:{
+            id:postId
+        },
+        data:{
+            views:{
+                increment:1
+            }
+        }
+    })
+     const postData = await tx.post.findUnique({
+        where:{
+            id:postId
+        },
+        include:{
+            comments:{
+                where:{
+                    parentId:null,
+                    status: CommentStatus.Approved
+                },
+                orderBy:{createdAt:"desc"},
+                include:{
+                    replies: {
+                        where:{
+                            status: CommentStatus.Approved
+                        },
+                        orderBy:{createdAt:"asc"},
+                        include:{
+                            replies:{
+                                where:{
+                                    status: CommentStatus.Approved
+                                },
+                                orderBy: {createdAt:"asc"}
+                            }
+                        }
+                    }
+                }
+            },
+            _count:{
+                select:{comments:true}
+            }
+        }
+    })
+    return postData;
+   })
+   
+}
 export const postService = {
     createPost,
-    getAllPost
+    getAllPost,
+    getPostById
 }
