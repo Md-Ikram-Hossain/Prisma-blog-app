@@ -250,7 +250,7 @@ Contributions are welcome!
 
 ## 👨‍💻 Author
 
-**Md. Ikram Hossain**
+**Md.Ikram Hossain**
 
 - GitHub: https://github.com/Md-Ikram-Hossain
 - LinkedIn: https://www.linkedin.com/in/mdih
